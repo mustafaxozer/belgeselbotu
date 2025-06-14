@@ -1,13 +1,20 @@
 from telethon import TelegramClient
 import asyncio
 import os
+from datetime import datetime, timedelta
 from PIL import Image
 from telethon.tl.types import MessageMediaPhoto
+from keep_alive import keep_alive
 
-api_id = 25585459
-api_hash = '01bfeb393e9ec6b0a8c4f8e400fc19ad'
-phone_number = '+17423784812'
+# Web sunucusunu başlatmak için
+keep_alive()
 
+# ---- Telegram API bilgileri ----
+api_id = int(os.getenv("API_ID", 25585459))
+api_hash = os.getenv("API_HASH", '01bfeb393e9ec6b0a8c4f8e400fc19ad')
+phone_number = os.getenv("PHONE", '+17423784812')
+
+# ---- Kanal Ayarları ----
 source_channel = 'trtbelgesel'
 target_channel = 'tarihtebuguntur'
 
@@ -16,21 +23,25 @@ client = TelegramClient('kendi_session', api_id, api_hash)
 async def crop_and_send_photo(message):
     try:
         temp_path = await message.download_media(file='temp_image.jpg')
-        if temp_path is None:
+        if not temp_path:
             print("Görsel indirilemedi.")
             return
-        from PIL import Image
+
         img = Image.open(temp_path)
         width, height = img.size
+
         if height <= 10:
             print("Görsel çok küçük, kırpılamaz.")
             return
+
         cropped = img.crop((0, 0, width, height - 100))
         cropped_path = 'cropped_image.jpg'
         cropped.save(cropped_path)
+
         await client.send_file(target_channel, file=cropped_path, caption=message.text or '')
         os.remove(temp_path)
         os.remove(cropped_path)
+
     except Exception as e:
         print(f"Fotoğraf işleme hatası: {e}")
 
@@ -61,7 +72,7 @@ async def kontrol_et():
 
 async def main():
     await client.start(phone=phone_number)
-    print("Bot başladı.")
+    print("Bot başlatıldı.")
     await kontrol_et()
 
 client.loop.run_until_complete(main())
